@@ -1,46 +1,47 @@
 #!/usr/bin/env bash
 # Script that displays information about subdomains
 
-# Function to get domain information
 display_info() {
     local domain="$1"
     local subdomain="$2"
     
-    # Get DNS information using dig and process the result
-    local result
-    result=$(dig "$subdomain.$domain" | grep -A1 'ANSWER SECTION:' | tail -1)
+    # Get the DNS record information using dig
+    local line
+    line=$(dig "$subdomain.$domain" | grep -A1 'ANSWER SECTION:' | tail -1)
     
-    # Check if result is not empty
-    if [ -n "$result" ]; then
-        # Extract the record type and destination IP
-        local record_type
-        record_type=$(echo "$result" | awk '{print $4}')
-        
-        local destination
-        destination=$(echo "$result" | awk '{print $5}')
-        
-        # Display the information in the required format
-        echo "The subdomain $subdomain is a $record_type record and points to $destination"
+    # Parse the record type and destination IP
+    local record_type
+    record_type=$(echo "$line" | awk '{print $4}')
+    
+    local destination
+    destination=$(echo "$line" | awk '{print $5}')
+    
+    # Print the information in the required format
+    echo "The subdomain $subdomain is a $record_type record and points to $destination"
+}
+
+# Main function
+main() {
+    local domain="$1"
+    local subdomain="$2"
+    
+    if [ -z "$subdomain" ]; then
+        # If no subdomain is specified, display info for all default subdomains
+        display_info "$domain" "www"
+        display_info "$domain" "lb-01"
+        display_info "$domain" "web-01"
+        display_info "$domain" "web-02"
+    else
+        # If a specific subdomain is provided, only display info for that one
+        display_info "$domain" "$subdomain"
     fi
 }
 
-# Main script
-domain="$1"
-subdomain="$2"
-
-# Check if domain parameter is provided
-if [ -z "$domain" ]; then
-    echo "Domain parameter is required"
+# Check if at least one argument (domain) is provided
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 domain [subdomain]"
     exit 1
 fi
 
-# If subdomain is provided, display information for that specific subdomain
-if [ -n "$subdomain" ]; then
-    display_info "$domain" "$subdomain"
-else
-    # Otherwise, display information for default subdomains in the specified order
-    for sub in "www" "lb-01" "web-01" "web-02"
-    do
-        display_info "$domain" "$sub"
-    done
-fi"
+# Call the main function with all arguments
+main "$1" "$2"
